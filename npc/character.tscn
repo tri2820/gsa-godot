@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://gsa_godot_character"]
+
+[ext_resource type="Script" path="res://npc/character.gd" id="1_character"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.35
+height = 1.75
+
+[node name="Character" type="CharacterBody3D"]
+script = ExtResource("1_character")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_1")
+disabled = true

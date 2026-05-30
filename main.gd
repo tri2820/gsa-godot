@@ -54,6 +54,14 @@ var _fps_label: Label
 var _info_label: Label
 var _pose_label: Label
 
+# Sidebar (right edge): collapsible panel of live tunables.
+var _sidebar_content: VBoxContainer = null
+var _sidebar_expanded := true
+var _sidebar_toggle_btn: Button = null
+
+# Spawned NPC ref so sidebar sliders can mutate it live.
+var _npc: Node3D = null
+
 @onready var camera: Camera3D = $Camera3D
 
 
@@ -89,10 +97,26 @@ func _ready() -> void:
 					i += 1
 		i += 1
 
+	_spawn_npc()
+
 	if _record_mode:
 		_setup_recording()
 	else:
 		_apply_camera(0)
+
+
+func _spawn_npc() -> void:
+	# One NPC at the splat AABB floor centre (Godot world coords). The NPC
+	# walks itself via its embedded Brain — no per-frame wiring from main.gd.
+	var npc_scene := load("res://npc/npc.tscn") as PackedScene
+	_npc = npc_scene.instantiate() as Node3D
+	_npc.brain_seed = 1
+	# y tuned empirically by bisection: visible splat floor sits around
+	# Godot y≈-1.5; the Mixamo character's feet rest ~0.21 m below
+	# CharacterBody3D.position (hip rest offset, exposed by stripping
+	# the Walk root translation). -1.71 puts feet on concrete.
+	_npc.position = Vector3(0.0, -1.71, 0.0)
+	add_child(_npc)
 
 
 # --- camera state ---
@@ -128,6 +152,7 @@ func _setup_ui() -> void:
 	canvas.add_child(_fps_label)
 	canvas.add_child(_info_label)
 	canvas.add_child(_pose_label)
+	_build_sidebar(canvas)
 
 func _mk_label(pos: Vector2, sz: int, color: Color) -> Label:
 	var lbl := Label.new()
@@ -137,6 +162,84 @@ func _mk_label(pos: Vector2, sz: int, color: Color) -> Label:
 	lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	lbl.add_theme_constant_override("outline_size", 6)
 	return lbl
+
+
+# --- collapsible right-edge sidebar of live tunables ---
+
+func _build_sidebar(canvas: CanvasLayer) -> void:
+	# Container anchored to the right edge of the viewport.
+	var sidebar := PanelContainer.new()
+	sidebar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	sidebar.position = Vector2(-340, 16)
+	sidebar.custom_minimum_size = Vector2(320, 0)
+	# Block clicks falling through to the 3D viewport when interacting.
+	sidebar.mouse_filter = Control.MOUSE_FILTER_STOP
+	canvas.add_child(sidebar)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	sidebar.add_child(vbox)
+
+	# Toggle button — always visible.
+	_sidebar_toggle_btn = Button.new()
+	_sidebar_toggle_btn.text = "▼  Controls"
+	_sidebar_toggle_btn.add_theme_font_size_override("font_size", 18)
+	_sidebar_toggle_btn.pressed.connect(_toggle_sidebar)
+	vbox.add_child(_sidebar_toggle_btn)
+
+	# Content lives in its own VBox so we can show/hide as a unit.
+	_sidebar_content = VBoxContainer.new()
+	_sidebar_content.add_theme_constant_override("separation", 6)
+	vbox.add_child(_sidebar_content)
+
+	_add_section_label(_sidebar_content, "NPC")
+	_add_slider(_sidebar_content, "Y (feet on floor)", -3.0, 0.5, 0.01, -1.71,
+		func(v: float) -> void:
+			if _npc != null:
+				_npc.position.y = v)
+
+func _toggle_sidebar() -> void:
+	_sidebar_expanded = not _sidebar_expanded
+	_sidebar_content.visible = _sidebar_expanded
+	_sidebar_toggle_btn.text = ("▼  Controls" if _sidebar_expanded else "▶  Controls")
+
+func _add_section_label(parent: VBoxContainer, txt: String) -> void:
+	var lbl := Label.new()
+	lbl.text = txt
+	lbl.add_theme_font_size_override("font_size", 16)
+	lbl.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
+	parent.add_child(lbl)
+
+func _add_slider(parent: VBoxContainer, name: String, lo: float, hi: float, step: float, value: float, on_change: Callable) -> HSlider:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	parent.add_child(row)
+
+	var caption := Label.new()
+	caption.text = name
+	caption.add_theme_font_size_override("font_size", 13)
+	caption.custom_minimum_size = Vector2(150, 0)
+	row.add_child(caption)
+
+	var value_lbl := Label.new()
+	value_lbl.text = "%.2f" % value
+	value_lbl.add_theme_font_size_override("font_size", 13)
+	value_lbl.custom_minimum_size = Vector2(50, 0)
+	value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(value_lbl)
+
+	var slider := HSlider.new()
+	slider.min_value = lo
+	slider.max_value = hi
+	slider.step = step
+	slider.value = value
+	slider.custom_minimum_size = Vector2(0, 24)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(func(v: float) -> void:
+		value_lbl.text = "%.2f" % v
+		on_change.call(v))
+	parent.add_child(slider)
+	return slider
 
 
 # --- input (interactive only) ---

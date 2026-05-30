@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3 uid="uid://gsa_godot_npc"]
+
+[ext_resource type="PackedScene" path="res://npc/character.tscn" id="1_char"]
+[ext_resource type="Script" path="res://npc/npc.gd" id="2_npc"]
+
+[node name="NPC" instance=ExtResource("1_char")]
+script = ExtResource("2_npc")

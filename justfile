@@ -3,7 +3,7 @@
 # will give you everything.
 
 GODOT      := env_var_or_default("GODOT", "/Applications/Godot.app/Contents/MacOS/Godot")
-frames     := "80"
+frames     := "240"   # 8s at 30 fps
 fps        := "30"
 output_dir := "out"
 
