@@ -1,0 +1,32 @@
+# Godot 4+ specific ignores
+.godot/
+.nomedia
+
+# Godot-specific ignores
+.import/
+export.cfg
+export_credentials.cfg
+
+# Imported translations (automatically generated from CSV files)
+*.translation
+
+# Mono-specific ignores
+.mono/
+data_*/
+mono_crash.*.json
+
+*.import
+*.uid
+
+# macOS
+.DS_Store
+
+# Nix
+result
+.direnv/
+
+# User assets and runtime artefacts (large / private)
+scene.ply
+samples/
+out/
+captures.json
